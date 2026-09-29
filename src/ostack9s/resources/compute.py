@@ -108,6 +108,12 @@ def server_flavor(server: Any) -> str:
     return attr(flavor, "original_name") or attr(flavor, "name") or attr(flavor, "id") or ""
 
 
+def server_fault(server: Any) -> str:
+    """Reason of an ERROR state: Horizon shows it only in the detail page."""
+    message = attr(server, "fault.message") or ""
+    return message if len(message) <= 80 else message[:79] + "…"
+
+
 def server_status(server: Any) -> str:
     status = attr(server, "status", "")
     task = attr(server, "task_state")
@@ -296,6 +302,7 @@ SERVER = ResourceKind(
         Column("AZ", "availability_zone"),
         Column("Locked", "is_locked"),
         Column("Created", "created_at"),
+        Column("Fault", server_fault),
     ],
     children=[
         Child("e", "Instance actions", "compute.server_action", lambda s: {"server": s.id}),
@@ -498,6 +505,41 @@ KEYPAIR = ResourceKind(
     ],
 )
 
+
+def server_group_placement(group: Any, host_ids: list[str]) -> str:
+    """Check the policy against the hosts of the members (``hostId`` is hidden by Horizon).
+
+    ``hostId`` is a per-project hash of the compute host: equal values mean
+    same host, which is what anti-affinity must avoid.
+    """
+    policy = attr(group, "policy") or " ".join(attr(group, "policies") or [])
+    hosts = [h for h in host_ids if h]
+    if len(hosts) < 2:
+        return "OK"
+    distinct = len(set(hosts))
+    if "anti-affinity" in policy and distinct < len(hosts):
+        return "SHARED_HOST" if policy.startswith("soft") else "VIOLATED"
+    if policy in ("affinity", "soft-affinity") and distinct > 1:
+        return "SPREAD" if policy.startswith("soft") else "VIOLATED"
+    return "OK"
+
+
+def list_server_groups(conn: Connection, q: dict[str, Any]) -> Any:
+    groups: list[Any] = list(conn.compute.server_groups(**q))
+    if any(attr(g, "member_ids") for g in groups):
+        hosts = {s.id: s.host_id for s in conn.compute.servers()}
+        for g in groups:
+            member_hosts = [hosts.get(m, "") for m in attr(g, "member_ids") or []]
+            g.host_count = len({h for h in member_hosts if h})
+            g.placement = server_group_placement(g, member_hosts)
+    return groups
+
+
+def list_group_members(conn: Connection, q: dict[str, Any]) -> Any:
+    members = set(q["members"])
+    return [s for s in conn.compute.servers() if s.id in members]
+
+
 SERVER_GROUP_POLICIES = ("anti-affinity", "affinity", "soft-anti-affinity", "soft-affinity")
 
 SERVER_GROUP = ResourceKind(
@@ -505,12 +547,18 @@ SERVER_GROUP = ResourceKind(
     title="Server groups",
     service="compute",
     aliases=("server-groups",),
-    status=None,
-    list=lambda conn, q: conn.compute.server_groups(**q),
+    status="placement",
+    enter="M",
+    list=list_server_groups,
     columns=[
         Column("Name", "name"),
         Column("Policy", lambda g: attr(g, "policy") or attr(g, "policies")),
         Column("Members", lambda g: len(attr(g, "member_ids") or [])),
+        Column("Hosts", "host_count"),
+        Column("Placement", "placement"),
+    ],
+    children=[
+        Child("M", "Members", "compute.server_group_member", lambda g: {"members": g.member_ids}),
     ],
     actions=[
         Action(
@@ -533,4 +581,19 @@ SERVER_GROUP = ResourceKind(
     ],
 )
 
-KINDS = [SERVER, SERVER_ACTION, FLAVOR, KEYPAIR, SERVER_GROUP]
+SERVER_GROUP_MEMBER = ResourceKind(
+    key="compute.server_group_member",
+    title="Server group members",
+    service="compute",
+    requires_parent=True,
+    list=list_group_members,
+    columns=[
+        Column("Name", "name"),
+        Column("Status", server_status),
+        Column("Host ID", "host_id"),
+        Column("AZ", "availability_zone"),
+        Column("Addresses", server_addresses),
+    ],
+)
+
+KINDS = [SERVER, SERVER_ACTION, FLAVOR, KEYPAIR, SERVER_GROUP, SERVER_GROUP_MEMBER]

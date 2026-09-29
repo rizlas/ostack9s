@@ -491,3 +491,67 @@ async def test_overview_sort_and_hide_empty():
         await pilot.press("e")
         await pilot.pause(0.1)
         assert table.row_count == 1
+
+
+async def test_search_jumps_to_result_context():
+    from ostack9s.ui.search_screen import SearchScreen
+
+    manager = FakeManager()
+    app = make_app(manager)
+    async with app.run_test(size=(200, 40)) as pilot:
+        await wait_rows(pilot, app, 2)
+        app.run_command("search beta")
+        await pilot.pause(0.1)
+        screen = app.screen
+        assert isinstance(screen, SearchScreen)
+        table = screen.query_one("#search-table", DataTable)
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if table.row_count == 2:
+                break
+        # One server per region: pick the one in r2.
+        row = next(i for i, hit in enumerate(screen.hits) if hit.ctx.region == "r2")
+        table.move_cursor(row=row)
+        await pilot.press("enter")
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if app.ctx is not None and app.ctx.region == "r2":
+                break
+        assert app.ctx == replace(CTX, region="r2")
+        assert app.view.kind.key == "compute.server"
+        assert app.view.filter == "beta"
+        await wait_rows(pilot, app, 1)
+        assert app.query_one("#table", DataTable).row_count == 1
+
+
+async def test_checks_views_open_from_command_bar():
+    manager = FakeManager()
+    conn = manager.conn
+    conn.network.ips.return_value = [
+        SimpleNamespace(
+            id="fip1",
+            name=None,
+            floating_ip_address="192.0.2.10",
+            port_id=None,
+            updated_at="2020-01-01T00:00:00Z",
+        )
+    ]
+    for lister in (
+        conn.block_storage.volumes,
+        conn.block_storage.snapshots,
+        conn.network.ports,
+        conn.network.routers,
+        conn.network.security_groups,
+    ):
+        lister.return_value = []
+    app = make_app(manager)
+    async with app.run_test(size=(200, 40)) as pilot:
+        await wait_rows(pilot, app, 2)
+        app.run_command("unused")
+        table = await wait_rows(pilot, app, 1)
+        assert app.view.kind.key == "checks.unused"
+        assert "192.0.2.10" in " ".join(str(c) for c in table.get_row_at(0))
+        app.run_command("audit")
+        await pilot.pause(0.3)
+        assert app.view.kind.key == "checks.security"
+        assert app.view.error is None

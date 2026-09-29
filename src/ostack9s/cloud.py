@@ -13,6 +13,7 @@ from __future__ import annotations
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from openstack.config import OpenStackConfig, cloud_region
@@ -28,6 +29,34 @@ def access_info(conn: Connection) -> Any:
     """Current token (with the service catalog) of the connection."""
     auth: Any = conn.session.auth
     return auth.get_access(conn.session)
+
+
+def parse_time(value: Any) -> datetime | None:
+    """API timestamp as an aware datetime (naive values are UTC)."""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        when = value
+    else:
+        try:
+            when = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return when if when.tzinfo else when.replace(tzinfo=UTC)
+
+
+def time_left(expires: datetime | None, now: datetime | None = None) -> str:
+    """Compact remaining time: ``3d``, ``5h 12m``, ``40m``, empty when unknown."""
+    if expires is None:
+        return ""
+    seconds = int((expires - (now or datetime.now(UTC))).total_seconds())
+    if seconds <= 0:
+        return "0m"
+    days, rest = divmod(seconds, 86400)
+    hours, rest = divmod(rest, 3600)
+    if days:
+        return f"{days}d"
+    return f"{hours}h {rest // 60}m" if hours else f"{rest // 60}m"
 
 
 @dataclass(frozen=True)
@@ -145,6 +174,27 @@ class CloudManager:
 
     def user_id(self, cloud: str) -> str:
         return access_info(self.base(cloud)).user_id or ""
+
+    def token_expires(self, ctx: Context) -> datetime | None:
+        """Expiration of the token used for this project."""
+        return access_info(self.scoped(ctx.cloud, ctx.project_id)).expires
+
+    def expiring_credentials(self, cloud: str, days: int = 14) -> list[tuple[Any, bool]]:
+        """Application credentials of the user expiring within ``days`` (or expired).
+
+        Each entry is (credential, used by this clouds.yaml entry). Restricted
+        application credentials may not list the others: the error is raised.
+        """
+        conn = self.base(cloud)
+        identity: Any = conn.identity
+        own = self._raw(cloud).auth.get("application_credential_id")
+        limit = datetime.now(UTC) + timedelta(days=days)
+        out = []
+        for cred in identity.application_credentials(conn.current_user_id):
+            expires = parse_time(cred.expires_at)
+            if expires is not None and expires <= limit:
+                out.append((cred, cred.id == own))
+        return out
 
     # --- projects ---------------------------------------------------------
 

@@ -8,6 +8,8 @@ Command bar (:)                          Tab accepts the suggestion, Esc closes
   :cloud <name>    :ctx                  switch cloud (clouds.yaml entry)
   :overview        :ov                   every cloud × project × region
   :topology        :topo                 network topology (Mermaid/DOT export)
+  :search <text>   :find                 name, ID or IP in every project and region
+  :unused  :audit                        unused resources, exposed security groups
   :lang <en|it>                          interface language
   :q                                     quit
 

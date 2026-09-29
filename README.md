@@ -27,6 +27,9 @@ the quotas of the current project always in sight.
 - **Describe pane** next to the table, updated while the cursor moves, and full screen
   YAML.
 - **Network topology** as a tree, exportable to Mermaid and Graphviz.
+- **What Horizon does not show**: search across every project and region, unused
+  resources, security groups open to the internet, per volume type quotas, server group
+  placement, expiring credentials (see [Beyond Horizon](#beyond-horizon)).
 - **Fast**: token cache, list cache, parallel calls, prefetch of the other regions.
 - **Privacy mode** for screencasts: masks public IPs, IDs, e-mails, keys, secrets.
 - English interface, Italian available (`--lang it`).
@@ -111,8 +114,8 @@ for the APIs, `--lang en|it` (or `OSTACK9S_LANG`), `--privacy`, `--no-token-cach
 - **Command bar** (`:`): opens below the header, with completion (`Tab` accepts the
   suggestion). It moves between resources, regions, projects and clouds.
 - **Quota panel** (F3 hides it): usage and limits of the project in the current region,
-  with units and coloured bars (yellow above 75%, red above 90%), plus the GPUs in use
-  by model.
+  with units and coloured bars (yellow above 75%, red above 90%), the volume and
+  gigabyte quotas of each limited volume type, and the GPUs in use by model.
 - **Table** titled `resource(scope)[rows]`, with the active filter.
 - **Describe pane** (`d`): YAML of the highlighted row next to the table; `Tab` moves
   the focus into it.
@@ -128,6 +131,8 @@ for the APIs, `--lang en|it` (or `OSTACK9S_LANG`), `--privacy`, `--no-token-cach
 | `:cloud <name>` (`:ctx`) | switch `clouds.yaml` entry |
 | `:overview` (`:ov`) | every cloud × project × region; Enter switches context |
 | `:topology` (`:topo`) | network topology of the project in the region |
+| `:search <text>` (`:find`) | name, ID or IP address in every project and region |
+| `:unused`, `:audit` | unused resources, security groups open to the internet |
 | `:lang <en\|it>` | interface language |
 | `:privacy [on\|off]` | privacy mode (also `Ctrl+P`) |
 | `:menu`, `:help`, `:q` | resource menu, help, quit |
@@ -168,14 +173,14 @@ project has no resources, `Enter` switches to the selected context.
 
 | Service | Resources and actions |
 |---|---|
-| Compute | servers: launch (also boot from volume, cloud-init), start/stop, soft/hard reboot, pause, suspend, shelve, lock, resize with confirm/revert, rebuild, snapshot, rename, console log, console URL (noVNC, SPICE or serial, whichever the cloud offers), attach/detach of volumes, interfaces, floating IPs and security groups, instance actions; flavors; key pairs (create/import); server groups |
+| Compute | servers (with the fault message of ERROR servers): launch (also boot from volume, cloud-init), start/stop, soft/hard reboot, pause, suspend, shelve, lock, resize with confirm/revert, rebuild, snapshot, rename, console log, console URL (noVNC, SPICE or serial, whichever the cloud offers), attach/detach of volumes, interfaces, floating IPs and security groups, instance actions; flavors; key pairs (create/import); server groups (members, host placement check) |
 | Block storage | volumes: create (also from image), extend, edit, snapshot, backup, attach/detach, bootable, upload to image, retype, delete; snapshots (volume from snapshot); backups (restore) |
 | Image | list, edit name and visibility, delete |
-| Network | networks (with subnet), subnets, routers (gateway, interfaces), ports, floating IPs (allocate, associate, release), security groups and rules, network topology |
+| Network | networks (with subnet), subnets, routers (gateway, interfaces), ports (port security, allowed address pairs, trunks, QoS), floating IPs (allocate, associate, release), security groups and rules (ports using them), RBAC sharing of networks, network topology |
 | Load balancer | load balancers, listeners, pools, members (navigation and delete) |
 | Object storage | containers (create, delete), objects (download, delete) |
 | Key manager | secrets (list, delete) |
-| Identity | application credentials (create, delete) |
+| Identity | application credentials (create, delete, time left) |
 
 Views follow the cloud policies: when an API answers 403, the table shows the error and
 the rest of the application keeps working.
@@ -187,6 +192,36 @@ external networks, routers with their gateway, internal networks with their subn
 the servers attached to each network with fixed and floating IPs. `c` copies the diagram
 as Mermaid (renders on GitHub and GitLab), `s` saves `topology-<project>-<region>.mmd`
 and `.dot` (Graphviz) in the current directory, without overwriting existing files.
+
+## Beyond Horizon
+
+Things a regular user cannot see in Horizon, or only one page at a time:
+
+- **Global search** (`:search <text>`, or `m` then `S`): name, ID or IP address in
+  servers, ports, floating IPs, volumes, networks, subnets, routers, security groups and
+  load balancers of every project and region. Results arrive as each context answers,
+  exact matches in bold; `Enter` switches context and opens the resource filtered.
+- **Unused resources** (`:unused`): floating IPs not associated, volumes not attached,
+  snapshots older than 30 days, servers stopped for more than 7 days, ports without a
+  device, routers with a gateway and no interfaces, security groups used by no port.
+  `Ctrl+D` deletes the highlighted one (servers excepted).
+- **Security group audit** (`:audit`): ingress rules open to `0.0.0.0/0` or `::/0` for
+  all traffic, all ports, sensitive services (SSH, RDP, databases, Docker API, …) or
+  ranges wider than 100 ports, with the number of ports using the group. The security
+  group view counts the ports of each group and `w` lists them.
+- **Per volume type quotas**: Cinder limits such as `gigabytes_<type>` appear in the
+  quota panel and in the overview when they are not unlimited.
+- **Server group placement**: members with their `hostId` (a per-project hash of the
+  compute host) and a check of the policy: `VIOLATED` when anti-affinity members share a
+  host, `SHARED_HOST` for soft anti-affinity.
+- **Ports**: port security, allowed address pairs and trunk subports as columns, with
+  actions to set the address pairs (`p`) and port security (`s`).
+- **Network sharing**: RBAC policies of a network (`b` from the network, or `:rbac`),
+  with actions to share it with a project and stop sharing.
+- **Expirations**: time left of the token in the header, a warning at startup for
+  application credentials expiring within 14 days, and a time left column in their
+  view.
+- **Fault message** of servers in ERROR directly in the server table.
 
 ## GPUs
 

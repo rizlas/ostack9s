@@ -15,6 +15,7 @@ import re
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from typing import Any, Literal
 
 import yaml
@@ -30,7 +31,7 @@ from textual.timer import Timer
 from textual.widgets import DataTable, Input, Static
 
 from .. import privacy, resources
-from ..cloud import CloudManager, Context, Target
+from ..cloud import CloudManager, Context, Target, parse_time, time_left
 from ..gpu import count_gpus
 from ..helptext import GLOBAL_HELP
 from ..i18n import LANGUAGES, set_language, t
@@ -38,9 +39,11 @@ from ..overview import Summary, server_counts, short_error, summarize
 from ..privacy import mask
 from ..resources import Action, Field, ResourceKind
 from ..resources.base import Options, status_style, to_plain
+from ..search import Hit
 from .modals import ConfirmScreen, FormScreen, FuzzySelect, TextScreen
 from .overview_screen import OverviewScreen
 from .screens import PasswordScreen, ResourceMenu, TopologyScreen
+from .search_screen import SearchScreen
 from .widgets import CommandInput, Crumbs, DescribePane, HeaderBar, Hint, QuotaPanel
 
 STATUS_TITLES = {"Status", "Provisioning", "Operating"}
@@ -58,6 +61,8 @@ COMMANDS = {
     "ov": "overview",
     "topology": "topology",
     "topo": "topology",
+    "search": "search",
+    "find": "search",
     "menu": "menu",
     "lang": "lang",
     "privacy": "privacy",
@@ -180,6 +185,9 @@ class OstdApp(App[None]):
         self.ctx: Context | None = None
         self.user = ""
         self.auth = ""
+        self.token_expires: datetime | None = None
+        # Clouds already checked for expiring application credentials.
+        self.expiry_checked: set[str] = set()
         self.regions: list[str] = []
         self.targets: list[Target] = []
         self.summaries: dict[Context, Summary] = {}
@@ -271,18 +279,23 @@ class OstdApp(App[None]):
             self._set_status()
             return
 
-        def resolve() -> tuple[Context, list[str], str, str]:
+        def resolve() -> tuple[Context, list[str], str, str, datetime | None]:
             ctx = self.manager.context(cloud, project_id, region)
             locked = self.manager.is_project_locked(cloud)
+            try:
+                expires = self.manager.token_expires(ctx)
+            except Exception:  # noqa: BLE001 - only shown in the header
+                expires = None
             return (
                 ctx,
                 self.manager.regions(ctx.cloud, ctx.project_id),
                 self.manager.user_name(cloud),
                 t("application credential") if locked else self.manager.auth_type(cloud),
+                expires,
             )
 
         try:
-            ctx, regions, user, auth = await asyncio.to_thread(resolve)
+            ctx, regions, user, auth, expires = await asyncio.to_thread(resolve)
         except Exception as exc:  # noqa: BLE001
             self.notify(error_text(exc), title=t("Connection failed"), severity="error", timeout=15)
             self._set_status()
@@ -294,6 +307,7 @@ class OstdApp(App[None]):
         self.regions = regions
         self.user = user
         self.auth = auth
+        self.token_expires = expires
         root = self.stack[0]
         self.stack = [View(root.kind, path=[root.kind.title], sort=root.sort)]
         if ctx.cloud not in known:
@@ -305,6 +319,32 @@ class OstdApp(App[None]):
         self.refresh_quota()
         self.load_view()
         self.prefetch_lists()
+        if ctx.cloud not in self.expiry_checked:
+            self.expiry_checked.add(ctx.cloud)
+            self.check_credentials(ctx.cloud)
+
+    @work(thread=True, group="expiry")
+    def check_credentials(self, cloud: str) -> None:
+        """Warn about application credentials that expire soon (Horizon does not)."""
+        try:
+            expiring = self.manager.expiring_credentials(cloud)
+        except Exception:  # noqa: BLE001 - restricted credentials cannot list them
+            return
+        for cred, own in expiring:
+            left = time_left(parse_time(cred.expires_at))
+            if own:
+                text = t(
+                    "The credential of cloud {cloud} expires in {left}", cloud=cloud, left=left
+                )
+            else:
+                text = t(
+                    "Application credential {name} expires in {left}", name=cred.name, left=left
+                )
+            self.call_from_thread(self._warn, text)
+
+    def _warn(self, text: str) -> None:
+        if self.screen_stack:  # the app may be shutting down
+            self.notify(text, severity="warning", timeout=15)
 
     @work(thread=True, exclusive=True, group="targets")
     def load_targets(self) -> None:
@@ -460,7 +500,11 @@ class OstdApp(App[None]):
         for action in kind.actions:
             style = "bold red" if action.destructive else "bold dodger_blue1"
             hints.append(Hint(action.key, action.label, style))
-        self._q(HeaderBar).show(self.ctx, self.user, self.auth, hints, privacy.is_enabled())
+        auth = self.auth
+        left = time_left(self.token_expires)
+        if left:
+            auth = f"{auth} · {t('token {left}', left=left)}"
+        self._q(HeaderBar).show(self.ctx, self.user, auth, hints, privacy.is_enabled())
 
     def _render_panel(self) -> None:
         summary = self.summaries.get(self.ctx) if self.ctx else None
@@ -592,7 +636,7 @@ class OstdApp(App[None]):
         words += [f"project {mask(target.project.name)}" for target in self.targets]
         words += [f"cloud {c}" for c in self.manager.cloud_names()]
         words += [f"lang {lang}" for lang in LANGUAGES]
-        words += ["overview", "topology", "menu", "help", "quit"]
+        words += ["overview", "topology", "search", "menu", "help", "quit"]
         self._q("#cmd", CommandInput).suggester = SuggestFromList(words, case_sensitive=False)
 
     def _open_bar(self, mode: CommandMode) -> None:
@@ -606,7 +650,7 @@ class OstdApp(App[None]):
         box.placeholder = (
             t("filter rows")
             if mode == "filter"
-            else t("resource, region <r>, project <p>, cloud <c>, topology, lang <en|it>")
+            else t("resource, region <r>, project <p>, cloud <c>, search <text>, lang <en|it>")
         )
         box.focus()
 
@@ -647,6 +691,7 @@ class OstdApp(App[None]):
             "quit": self.exit,
             "overview": self.action_overview,
             "topology": self.action_topology,
+            "search": lambda: self.action_search(arg),
             "menu": self.action_menu,
             "help": self.action_help,
             "region": lambda: self._command_region(arg),
@@ -856,6 +901,7 @@ class OstdApp(App[None]):
             special: dict[str, Callable[[], None]] = {
                 "topology": self.action_topology,
                 "overview": self.action_overview,
+                "search": self.action_search,
                 "region": self.action_select_region,
                 "project": self.action_select_project,
                 "cloud": self.action_select_cloud,
@@ -932,6 +978,25 @@ class OstdApp(App[None]):
                 self._switch(ctx.cloud, ctx.project_id, ctx.region)
 
         self.push_screen(OverviewScreen(self.manager, self.ctx), chosen)
+
+    def action_search(self, query: str = "") -> None:
+        def chosen(hit: Hit | None) -> None:
+            if hit is not None:
+                self.run_worker(self._go_to(hit), group="context")
+
+        self.push_screen(SearchScreen(self.manager, query), chosen)
+
+    async def _go_to(self, hit: Hit) -> None:
+        """Open the resource view of a search result, in its context."""
+        if hit.ctx != self.ctx:
+            await self.switch_context(hit.ctx.cloud, hit.ctx.project_id, hit.ctx.region)
+            if self.ctx != hit.ctx:  # switch failed, already notified
+                return
+        kind = resources.get(hit.kind)
+        self.stack = [View(kind, path=[kind.title], filter=hit.filter)]
+        self._render_table()
+        self._set_status()
+        self.load_view()
 
     def _switch(self, cloud: str, project_id: str | None, region: str | None) -> None:
         self.run_worker(self.switch_context(cloud, project_id, region), group="context")

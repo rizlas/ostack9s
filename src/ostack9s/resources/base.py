@@ -158,15 +158,24 @@ class ResourceKind:
 def status_style(status: str) -> str:
     """Rich style for a resource status."""
     s = status.upper()
-    if s in {"ERROR", "ERROR_DELETING", "ERROR_EXTENDING", "FAILED", "DOWN", "OFFLINE"}:
+    if s in {
+        "ERROR",
+        "ERROR_DELETING",
+        "ERROR_EXTENDING",
+        "FAILED",
+        "DOWN",
+        "OFFLINE",
+        "VIOLATED",
+        "HIGH",
+    }:
         return "bold red"
     if s in {"SHUTOFF", "STOPPED", "SHELVED", "SHELVED_OFFLOADED", "PAUSED", "SUSPENDED"}:
         return "dim"
-    if s in {"ACTIVE", "AVAILABLE", "IN-USE", "ONLINE", "UP", "ENABLED"}:
+    if s in {"ACTIVE", "AVAILABLE", "IN-USE", "ONLINE", "UP", "ENABLED", "OK"}:
         return "green"
     if s.endswith("ING") or s.startswith("PENDING") or s in {"BUILD", "RESIZE"}:
         return "yellow"
-    if s == "VERIFY_RESIZE":
+    if s in {"VERIFY_RESIZE", "SHARED_HOST", "SPREAD", "MEDIUM"}:
         return "bold yellow"
     return ""
 

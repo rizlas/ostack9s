@@ -7,6 +7,7 @@ from typing import Any
 
 from openstack.connection import Connection
 
+from ..cloud import parse_time, time_left
 from ..i18n import t
 from .base import Action, Child, Column, Field, ResourceKind, attr
 
@@ -74,6 +75,13 @@ def list_app_credentials(conn: Connection, q: dict[str, Any]) -> Any:
 def delete_app_credential(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
     _identity(conn).delete_application_credential(conn.current_user_id, item)
     return t("Application credential {name} deleted", name=item.name)
+
+
+def expires_in(cred: Any) -> str:
+    expires = parse_time(attr(cred, "expires_at"))
+    if expires is None:
+        return t("never")
+    return time_left(expires) if time_left(expires) != "0m" else t("expired")
 
 
 def create_app_credential(conn: Connection, _item: Any, v: dict[str, Any]) -> str:
@@ -282,6 +290,7 @@ APP_CREDENTIAL = ResourceKind(
         Column("Project", "project_id"),
         Column("Unrestricted", "unrestricted"),
         Column("Expires", "expires_at"),
+        Column("Expires in", expires_in),
         Column("Description", "description"),
     ],
     actions=[

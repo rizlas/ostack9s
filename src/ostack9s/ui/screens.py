@@ -24,6 +24,7 @@ from ..privacy import mask
 SPECIAL = {
     "topology": "Network topology",
     "overview": "Overview (all projects)",
+    "search": "Search all projects",
     "region": "Switch region",
     "project": "Switch project",
     "cloud": "Switch cloud",
@@ -57,6 +58,7 @@ MENU: list[tuple[str, list[tuple[str, str]]]] = [
             ("p", "network.port"),
             ("a", "network.floating_ip"),
             ("x", "network.security_group"),
+            ("h", "network.rbac_policy"),
             ("t", "topology"),
         ],
     ),
@@ -73,8 +75,12 @@ MENU: list[tuple[str, list[tuple[str, str]]]] = [
         [("e", "key_manager.secret"), ("c", "identity.application_credential")],
     ),
     (
+        "Checks",
+        [("U", "checks.unused"), ("X", "checks.security")],
+    ),
+    (
         "Context",
-        [("O", "overview"), ("R", "region"), ("J", "project"), ("C", "cloud")],
+        [("O", "overview"), ("S", "search"), ("R", "region"), ("J", "project"), ("C", "cloud")],
     ),
 ]
 

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from . import compute, network, other, storage
+from . import checks, compute, network, other, storage
 from .base import Action, Child, Column, Field, ResourceKind
 
 REGISTRY: dict[str, ResourceKind] = {
-    kind.key: kind for mod in (compute, storage, network, other) for kind in mod.KINDS
+    kind.key: kind for mod in (compute, storage, network, other, checks) for kind in mod.KINDS
 }
 
 

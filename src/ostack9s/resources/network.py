@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 from openstack.connection import Connection
@@ -51,6 +52,38 @@ def choices(*values: str) -> Any:
 
 def fixed_ips(port: Any) -> str:
     return ", ".join(ip["ip_address"] for ip in attr(port, "fixed_ips") or [])
+
+
+def address_pairs(port: Any) -> str:
+    pairs = attr(port, "allowed_address_pairs") or []
+    return ", ".join(p.get("ip_address", "") for p in pairs)
+
+
+def trunk_info(port: Any) -> str:
+    """Trunk parent ports: number of subports and their VLANs."""
+    details = attr(port, "trunk_details")
+    if not details:
+        return ""
+    vlans = sorted(
+        str(s.get("segmentation_id"))
+        for s in details.get("sub_ports") or []
+        if s.get("segmentation_id")
+    )
+    return t("parent, VLAN {vlans}", vlans=",".join(vlans)) if vlans else t("parent")
+
+
+def list_security_groups(conn: Connection, q: dict[str, Any]) -> Any:
+    """Security groups with the number of ports using them (Horizon does not show it)."""
+    groups: list[Any] = list(conn.network.security_groups(**q))
+    used: Counter[str] = Counter()
+    try:
+        for port in conn.network.ports():
+            used.update(port.security_group_ids or [])
+    except Exception:  # noqa: BLE001 - the list is still useful without the counts
+        return groups
+    for group in groups:
+        group.port_count = used.get(group.id, 0)
+    return groups
 
 
 def rule_ports(rule: Any) -> str:
@@ -179,6 +212,46 @@ def release_fip(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
     return t("{ip} released", ip=item.floating_ip_address)
 
 
+def set_address_pairs(conn: Connection, item: Any, v: dict[str, Any]) -> str:
+    pairs = []
+    for entry in (v.get("pairs") or "").replace("\n", ",").split(","):
+        ip, _, mac = entry.strip().partition(" ")
+        if ip:
+            pairs.append(
+                {"ip_address": ip, **({"mac_address": mac.strip()} if mac.strip() else {})}
+            )
+    conn.network.update_port(item, allowed_address_pairs=pairs)
+    return t("Allowed address pairs updated ({count})", count=len(pairs))
+
+
+def set_port_security(conn: Connection, item: Any, v: dict[str, Any]) -> str:
+    enabled = bool(v.get("enabled"))
+    attrs: dict[str, Any] = {"is_port_security_enabled": enabled}
+    if not enabled:
+        # Neutron refuses to disable port security while groups are attached.
+        attrs["security_group_ids"] = []
+    conn.network.update_port(item, **attrs)
+    return t("Port security enabled") if enabled else t("Port security disabled")
+
+
+def create_rbac(conn: Connection, _item: Any, v: dict[str, Any]) -> str:
+    conn.network.create_rbac_policy(
+        object_type="network",
+        object_id=v["network"],
+        action=v["action"],
+        target_project_id=v["target"].strip(),
+    )
+    return t("Network shared with {target}", target=v["target"].strip())
+
+
+def delete_rbac(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
+    conn.network.delete_rbac_policy(item)
+    return t("Sharing with {target} removed", target=item.target_project_id)
+
+
+RBAC_ACTIONS = ("access_as_shared", "access_as_external")
+
+
 def create_sg(conn: Connection, _item: Any, v: dict[str, Any]) -> str:
     sg = conn.network.create_security_group(name=v["name"], description=v.get("description") or "")
     return t("Security group {name} created", name=sg.name)
@@ -253,6 +326,7 @@ NETWORK = ResourceKind(
     children=[
         Child("s", "Subnets", "network.subnet", lambda n: {"network_id": n.id}),
         Child("w", "Ports", "network.port", lambda n: {"network_id": n.id}),
+        Child("b", "Sharing (RBAC)", "network.rbac_policy", lambda n: {"object_id": n.id}),
     ],
     actions=[
         Action(
@@ -405,9 +479,47 @@ PORT = ResourceKind(
         Column("Owner", "device_owner"),
         Column("Device", "device_id"),
         Column("Network", "network_id"),
+        Column("Port security", "is_port_security_enabled"),
+        Column("Security groups", lambda p: len(attr(p, "security_group_ids") or [])),
+        Column("Allowed address pairs", address_pairs),
+        Column("Trunk", trunk_info),
+        Column("QoS policy", "qos_policy_id"),
     ],
     actions=[
         Action("n", "Edit", _rename("update_port"), fields=_name_fields()),
+        Action(
+            "p",
+            "Set allowed address pairs",
+            set_address_pairs,
+            confirm=True,
+            fields=[
+                Field(
+                    "pairs",
+                    "Address pairs",
+                    "textarea",
+                    default=lambda i: "\n".join(
+                        " ".join(filter(None, (p.get("ip_address"), p.get("mac_address"))))
+                        for p in attr(i, "allowed_address_pairs") or []
+                    ),
+                    help="One per line: IP or CIDR, optionally followed by a MAC",
+                )
+            ],
+        ),
+        Action(
+            "s",
+            "Set port security",
+            set_port_security,
+            confirm=True,
+            fields=[
+                Field(
+                    "enabled",
+                    "Port security enabled",
+                    "bool",
+                    default=lambda i: attr(i, "is_port_security_enabled", True),
+                    help="Disabling it also removes the security groups of the port",
+                )
+            ],
+        ),
         Action("ctrl+d", "Delete", _delete("delete_port", "Port"), confirm=True, destructive=True),
     ],
 )
@@ -461,10 +573,11 @@ SECURITY_GROUP = ResourceKind(
     aliases=("security-groups", "sg", "secgroups"),
     status=None,
     enter="r",
-    list=lambda conn, q: conn.network.security_groups(**q),
+    list=list_security_groups,
     columns=[
         Column("Name", "name"),
         Column("Rules", lambda g: len(attr(g, "security_group_rules") or [])),
+        Column("Ports", "port_count"),
         Column("Stateful", "stateful"),
         Column("Description", "description"),
     ],
@@ -475,6 +588,7 @@ SECURITY_GROUP = ResourceKind(
             "network.security_group_rule",
             lambda g: {"security_group_id": g.id},
         ),
+        Child("w", "Ports using it", "network.port", lambda g: {"security_groups": [g.id]}),
     ],
     actions=[
         Action(
@@ -539,4 +653,55 @@ SECURITY_GROUP_RULE = ResourceKind(
     ],
 )
 
-KINDS = [NETWORK, SUBNET, ROUTER, PORT, FLOATING_IP, SECURITY_GROUP, SECURITY_GROUP_RULE]
+RBAC_POLICY = ResourceKind(
+    key="network.rbac_policy",
+    title="RBAC policies",
+    service="network",
+    aliases=("rbac", "sharing"),
+    status=None,
+    list=lambda conn, q: conn.network.rbac_policies(**q),
+    columns=[
+        Column("Type", "object_type"),
+        Column("Object", "object_id"),
+        Column("Action", "action"),
+        Column("Target project", "target_project_id"),
+        Column("Owner project", "project_id"),
+    ],
+    actions=[
+        Action(
+            "N",
+            "Share network",
+            create_rbac,
+            needs_item=False,
+            fields=[
+                Field(
+                    "network",
+                    "Network",
+                    "select",
+                    True,
+                    default=lambda parent: attr(parent, "id"),
+                    options=network_options,
+                ),
+                Field("action", "Access", "select", True, options=choices(*RBAC_ACTIONS)),
+                Field(
+                    "target",
+                    "Target project ID",
+                    required=True,
+                    help="* = every project",
+                ),
+            ],
+        ),
+        Action("ctrl+d", "Stop sharing", delete_rbac, confirm=True, destructive=True),
+    ],
+)
+
+KINDS = [
+    NETWORK,
+    SUBNET,
+    ROUTER,
+    PORT,
+    FLOATING_IP,
+    SECURITY_GROUP,
+    SECURITY_GROUP_RULE,
+    RBAC_POLICY,
+]

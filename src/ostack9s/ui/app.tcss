@@ -193,3 +193,12 @@ OverviewScreen {
 OverviewScreen #overview-table {
     height: 1fr;
 }
+
+SearchScreen {
+    align: center top;
+    background: $background;
+}
+
+SearchScreen #search-table {
+    height: 1fr;
+}

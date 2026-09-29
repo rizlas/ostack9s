@@ -10,6 +10,8 @@ Barra comandi (:)                        Tab accetta il suggerimento, Esc chiude
   :cloud <nome>    :ctx                  cambia cloud (voce di clouds.yaml)
   :overview        :ov                   tutti i cloud × progetti × regioni
   :topology        :topo                 topologia di rete (export Mermaid/DOT)
+  :search <testo>  :find                 nome, ID o IP in tutti i progetti e regioni
+  :unused  :audit                        risorse inutilizzate, security group esposti
   :lang <en|it>                          lingua dell'interfaccia
   :q                                     esci
 
@@ -117,9 +119,6 @@ CATALOG: dict[str, str] = {
     ),
     "preparing form…": "preparazione form…",
     "quota · {region}": "quote · {region}",
-    "resource, region <r>, project <p>, cloud <c>, topology, lang <en|it>": (
-        "risorsa, region <r>, project <p>, cloud <c>, topology, lang <en|it>"
-    ),
     "search…": "cerca…",
     "updated in {seconds}s": "aggiornato in {seconds}s",
     "{count} more…": "altre {count}…",
@@ -453,6 +452,102 @@ CATALOG: dict[str, str] = {
     "{path} already exists": "{path} esiste già",
     "{what} {name} deleted": "{what} {name} eliminato",
     "{what} {name} is being deleted": "{what} {name} in eliminazione",
+    "* = every project": "* = tutti i progetti",
+    "Access": "Accesso",
+    "Address pairs": "Coppie di indirizzi",
+    "Age (days)": "Età (giorni)",
+    "Allowed address pairs": "Allowed address pairs",
+    "Allowed address pairs updated ({count})": "Allowed address pairs aggiornati ({count})",
+    "Application credential {name} expires in {left}": (
+        "L'application credential {name} scade tra {left}"
+    ),
+    "Checks": "Controlli",
+    "Delete a {type} from its own view": "Elimina {type} dalla sua vista",
+    "Detail": "Dettaglio",
+    "Disabling it also removes the security groups of the port": (
+        "Disattivarlo rimuove anche i security group della porta"
+    ),
+    "Expires in": "Scade tra",
+    "Fault": "Errore",
+    "Host ID": "Host ID",
+    "Hosts": "Host",
+    "Issue": "Problema",
+    "Match": "Corrispondenza",
+    "Network shared with {target}": "Rete condivisa con {target}",
+    "Object": "Oggetto",
+    "One per line: IP or CIDR, optionally followed by a MAC": (
+        "Uno per riga: IP o CIDR, seguito eventualmente da un MAC"
+    ),
+    "Owner project": "Progetto proprietario",
+    "Placement": "Posizionamento",
+    "Port security": "Port security",
+    "Port security disabled": "Port security disattivato",
+    "Port security enabled": "Port security attivo",
+    "Ports using it": "Porte che lo usano",
+    "QoS policy": "Policy QoS",
+    "RBAC policies": "Policy RBAC",
+    "Search all projects": "Cerca in tutti i progetti",
+    "Search in every project and region": "Cerca in tutti i progetti e le regioni",
+    "Security group audit": "Audit dei security group",
+    "Server group members": "Membri del server group",
+    "Set allowed address pairs": "Imposta allowed address pairs",
+    "Set port security": "Imposta port security",
+    "Severity": "Gravità",
+    "Share network": "Condividi rete",
+    "Sharing (RBAC)": "Condivisione (RBAC)",
+    "Sharing with {target} removed": "Condivisione con {target} rimossa",
+    "Stop sharing": "Smetti di condividere",
+    "Target project": "Progetto destinatario",
+    "Target project ID": "ID del progetto destinatario",
+    "The credential of cloud {cloud} expires in {left}": (
+        "La credenziale del cloud {cloud} scade tra {left}"
+    ),
+    "Trunk": "Trunk",
+    "Type at least {count} characters": "Scrivi almeno {count} caratteri",
+    "Unused resources": "Risorse inutilizzate",
+    "[b]Enter[/b] search / go to the resource   [b]Tab[/b] results   [b]Esc[/b] close": (
+        "[b]Invio[/b] cerca / vai alla risorsa   [b]Tab[/b] risultati   [b]Esc[/b] chiudi"
+    ),
+    "all traffic open to the internet": "tutto il traffico aperto a internet",
+    "all {proto} ports open to the internet": "tutte le porte {proto} aperte a internet",
+    "cannot list": "elenco non leggibile",
+    "expired": "scaduta",
+    "gateway set but no interfaces": "gateway impostato ma nessuna interfaccia",
+    "name, ID or IP address": "nome, ID o indirizzo IP",
+    "never": "mai",
+    "no device": "nessun dispositivo",
+    "not associated": "non associato",
+    "not attached": "non collegato",
+    "not used by any port": "non usato da nessuna porta",
+    "older than {days} days": "più vecchio di {days} giorni",
+    "parent": "parent",
+    "parent, VLAN {vlans}": "parent, VLAN {vlans}",
+    "resource, region <r>, project <p>, cloud <c>, search <text>, lang <en|it>": (
+        "risorsa, region <r>, project <p>, cloud <c>, search <testo>, lang <en|it>"
+    ),
+    "some resources not readable in {count} contexts": (
+        "alcune risorse non leggibili in {count} contesti"
+    ),
+    "token {left}": "token {left}",
+    "ports: {count}": "porte: {count}",
+    "{count} ports open to the internet": "{count} porte aperte a internet",
+    "{count} results · {done}/{total} contexts": "{count} risultati · {done}/{total} contesti",
+    "{services} open to the internet": "{services} aperto a internet",
+    "{status} since {days} days": "{status} da {days} giorni",
+    "floating IP": "floating IP",
+    "floating IPs": "floating IP",
+    "volume": "volume",
+    "volumes": "volumi",
+    "volume snapshot": "snapshot di volume",
+    "snapshots": "snapshot",
+    "server": "server",
+    "servers": "server",
+    "port": "porta",
+    "ports": "porte",
+    "router": "router",
+    "routers": "router",
+    "security group": "security group",
+    "security groups": "security group",
 }
 
 
