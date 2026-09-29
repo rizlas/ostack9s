@@ -1,0 +1,60 @@
+[project]
+name = "ostack9s"
+version = "0.1.0"
+description = "Fast, k9s style terminal dashboard for OpenStack"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [
+    { name = "rizlas", email = "rizlas@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+keywords = ["openstack", "tui", "terminal", "k9s", "horizon"]
+classifiers = [
+    "Environment :: Console :: Curses",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "openstacksdk>=4.20.0",
+    "textual>=8.2.8",
+    "pyyaml>=6",
+]
+
+[project.urls]
+Homepage = "https://github.com/rizlas/ostack9s"
+Issues = "https://github.com/rizlas/ostack9s/issues"
+
+[project.scripts]
+ostack9s = "ostack9s.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.27,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.9",
+    "ty>=0.0.84",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "BLE"]
+ignore = ["RUF001", "RUF002", "RUF003", "RUF012"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["tests"]

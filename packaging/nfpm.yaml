@@ -1,0 +1,29 @@
+# nfpm configuration for the .deb and .rpm packages (installs to /usr/bin).
+# VERSION and ARCH (amd64 or arm64) come from the environment.
+name: ostack9s
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+section: admin
+priority: optional
+maintainer: rizlas <rizlas@users.noreply.github.com>
+description: |
+  Fast, k9s style terminal dashboard for OpenStack.
+  Browse and manage servers, volumes, networks, load balancers and more
+  from the terminal, across projects and regions.
+vendor: rizlas
+homepage: https://github.com/rizlas/ostack9s
+license: GPL-3.0-or-later
+contents:
+  - src: dist/ostack9s
+    dst: /usr/bin/ostack9s
+    file_info:
+      mode: 0755
+  - src: LICENSE
+    dst: /usr/share/doc/ostack9s/LICENSE
+    file_info:
+      mode: 0644
+  - src: README.md
+    dst: /usr/share/doc/ostack9s/README.md
+    file_info:
+      mode: 0644

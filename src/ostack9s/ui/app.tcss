@@ -1,0 +1,195 @@
+Screen {
+    layout: vertical;
+    background: $background;
+}
+
+#header {
+    height: 7;
+    padding: 0 1;
+}
+
+#cmdbar {
+    height: 3;
+    border: round $accent;
+    padding: 0 1;
+}
+
+#cmdbar.filter {
+    border: round $warning;
+}
+
+#prompt {
+    width: 2;
+    text-style: bold;
+    color: $accent;
+}
+
+#cmdbar.filter #prompt {
+    color: $warning;
+}
+
+#cmd {
+    border: none;
+    height: 1;
+    padding: 0;
+    background: $background;
+}
+
+#body {
+    height: 1fr;
+}
+
+#quota {
+    width: 48;
+    border: round $primary-darken-1;
+    border-title-color: $accent;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+#main {
+    width: 1fr;
+    border: round $primary;
+    border-title-align: center;
+}
+
+#split {
+    height: 1fr;
+}
+
+#table {
+    height: 1fr;
+    width: 1fr;
+}
+
+#describe {
+    width: 50%;
+    border-left: tall $primary-darken-2;
+    border-title-color: $accent;
+    padding: 0 1;
+}
+
+#describe:focus {
+    border-left: tall $accent;
+}
+
+#message {
+    height: auto;
+    padding: 0 1;
+}
+
+#crumbs {
+    height: 1;
+    padding: 0 1;
+}
+
+/* --- modali ------------------------------------------------------------ */
+
+ModalScreen {
+    align: center middle;
+}
+
+.dialog {
+    background: $surface;
+    border: thick $primary;
+    padding: 0 1;
+    width: 80%;
+    max-width: 110;
+    height: auto;
+    max-height: 90%;
+}
+
+.dialog-title {
+    text-style: bold;
+    padding: 1 0;
+    width: 100%;
+}
+
+.fuzzy {
+    height: 70%;
+}
+
+.fuzzy OptionList {
+    height: 1fr;
+}
+
+.menu {
+    max-width: 60;
+    height: 85%;
+}
+
+.menu OptionList {
+    height: 1fr;
+}
+
+.confirm {
+    max-width: 70;
+}
+
+.confirm.destructive {
+    border: thick $error;
+}
+
+.form {
+    height: 90%;
+}
+
+.form-body {
+    height: 1fr;
+}
+
+.field-label {
+    margin-top: 1;
+    color: $text-muted;
+}
+
+.field-help {
+    color: $text-disabled;
+}
+
+.field-textarea {
+    height: 8;
+}
+
+.form Checkbox {
+    margin-top: 1;
+}
+
+.error {
+    color: $error;
+    height: auto;
+}
+
+.hint {
+    color: $text-muted;
+    height: auto;
+}
+
+.buttons {
+    height: auto;
+    align-horizontal: right;
+    padding-bottom: 1;
+}
+
+.buttons Button {
+    margin-left: 1;
+}
+
+.viewer {
+    width: 95%;
+    max-width: 200;
+    height: 90%;
+}
+
+#viewer-scroll {
+    height: 1fr;
+}
+
+OverviewScreen {
+    align: center top;
+    background: $background;
+}
+
+OverviewScreen #overview-table {
+    height: 1fr;
+}

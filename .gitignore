@@ -1,0 +1,55 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build and packaging (uv build, PyInstaller, nfpm)
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+*.spec
+*.whl
+*.deb
+*.rpm
+/ostack9s-*.tar.gz
+/out/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ty_cache/
+.cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Local credentials: never commit them
+clouds.yaml
+clouds.yaml.bak-*
+clouds*.yaml
+secure.yaml
+*openrc*.sh
+.env
+.env.*
+
+# Files written by ostack9s at runtime
+topology-*.mmd
+topology-*.dot
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db

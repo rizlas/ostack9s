@@ -1,0 +1,118 @@
+name: release
+
+# Push a tag like v0.2.0 (matching the version in pyproject.toml) to publish a
+# GitHub release with standalone binaries, .deb/.rpm packages and the wheel.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        name: Check that the tag matches the package version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          project=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          module=$(grep -m1 '__version__ = ' src/ostack9s/__init__.py | cut -d'"' -f2)
+          echo "tag=$tag pyproject=$project module=$module"
+          test "$tag" = "$project" && test "$tag" = "$module"
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: uv run black --check src tests
+      - run: uv run ruff check src tests
+      - run: uv run ty check src
+      - run: uv run pytest -q
+
+  binary:
+    needs: [version, tests]
+    strategy:
+      matrix:
+        include:
+          # Ubuntu 22.04 (glibc 2.35): binaries also run on newer distributions.
+          - runner: ubuntu-22.04
+            arch: amd64
+            target: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: arm64
+            target: aarch64
+    runs-on: ${{ matrix.runner }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Build standalone binary
+        run: packaging/build-binary.sh dist
+      - name: Smoke test
+        run: |
+          dist/ostack9s --help
+          dist/ostack9s import --help
+      - name: Tarball
+        run: |
+          name="ostack9s-${VERSION}-linux-${{ matrix.target }}"
+          mkdir -p "out/$name"
+          cp dist/ostack9s LICENSE README.md "out/$name/"
+          tar -C out -czf "$name.tar.gz" "$name"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: .deb and .rpm packages
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          "$(go env GOPATH)/bin/nfpm" package --config packaging/nfpm.yaml --packager deb --target .
+          "$(go env GOPATH)/bin/nfpm" package --config packaging/nfpm.yaml --packager rpm --target .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: |
+            *.tar.gz
+            *.deb
+            *.rpm
+
+  wheel:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python
+          path: dist/*
+
+  publish:
+    needs: [binary, wheel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Checksums
+        run: cd assets && sha256sum -- * > SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: assets/*
+          generate_release_notes: true

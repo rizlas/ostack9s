@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: black
+        run: uv run black --check src tests
+      - name: ruff
+        run: uv run ruff check src tests
+      - name: ty
+        run: uv run ty check src
+      - name: pytest
+        run: uv run pytest -q
+
+  binary:
+    # Catches packaging regressions (missing data files, dynamic imports).
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --locked
+      - run: packaging/build-binary.sh dist
+      - run: dist/ostack9s --help
