@@ -12,6 +12,7 @@ requires-python = ">=3.12"
 keywords = ["openstack", "tui", "terminal", "k9s", "horizon"]
 classifiers = [
     "Environment :: Console :: Curses",
+    "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.12",
     "Topic :: System :: Systems Administration",

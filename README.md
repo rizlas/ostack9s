@@ -34,40 +34,58 @@ the quotas of the current project always in sight.
 ## Installation
 
 Every [release](https://github.com/rizlas/ostack9s/releases) ships a standalone binary
-for Linux (x86_64 and aarch64): no Python needed on the machine.
+for Linux (x86_64, aarch64) and macOS (Apple Silicon, Intel): no Python needed on the
+machine.
 
-**Tarball, into `/usr/local/bin`:**
+### Install script
+
+Installs into `~/.local/bin`, no sudo needed. It picks the binary for your system,
+checks it against `SHA256SUMS` and replaces an older version:
 
 ```bash
-VERSION=0.1.0 ARCH=x86_64   # or aarch64
-NAME="ostack9s-${VERSION}-linux-${ARCH}"
-BASE="https://github.com/rizlas/ostack9s/releases/download"
-curl -LO "${BASE}/v${VERSION}/${NAME}.tar.gz"
-tar -xzf "${NAME}.tar.gz"
-sudo install -m 0755 "${NAME}/ostack9s" /usr/local/bin/ostack9s
+curl -fsSL https://github.com/rizlas/ostack9s/releases/latest/download/install.sh | sh
 ```
 
-**Debian/Ubuntu package, into `/usr/bin`:**
+`VERSION=0.1.0` installs a given release, `PREFIX=/some/dir` another directory. Run it
+again to upgrade.
+
+### Manual install
+
+Download the tarball for your system from the release page (`linux-x86_64`,
+`linux-aarch64`, `darwin-arm64`, `darwin-x86_64`) and copy the binary into
+`~/.local/bin`:
 
 ```bash
-sudo apt install ./ostack9s_0.1.0_amd64.deb      # or _arm64.deb
+tar -xzf ostack9s-0.1.0-linux-x86_64.tar.gz
+install -m 0755 ostack9s-0.1.0-linux-x86_64/ostack9s ~/.local/bin/ostack9s
 ```
 
-**Fedora/RHEL package, into `/usr/bin`:**
+For a system wide install use `/usr/local/bin` instead, with `sudo`.
+
+### Linux packages, system wide
+
+The `.deb` and `.rpm` packages install into `/usr/bin` for every user:
 
 ```bash
-sudo dnf install ./ostack9s-0.1.0-1.x86_64.rpm   # or .aarch64.rpm
+sudo apt install ./ostack9s_0.1.0_amd64.deb      # Debian, Ubuntu (or _arm64.deb)
+sudo dnf install ./ostack9s-0.1.0-1.x86_64.rpm   # Fedora, RHEL (or .aarch64.rpm)
 ```
 
-**Python package** (wheel from the release, or from source):
+### Python package
 
 ```bash
-uv tool install ostack9s-0.1.0-py3-none-any.whl  # or: pipx install …
+uv tool install ostack9s-0.1.0-py3-none-any.whl  # wheel from the release, or: pipx
 uv tool install .                                # from a clone of this repository
 ```
 
-Binaries are built on Ubuntu 22.04 and run on distributions with glibc 2.35 or newer.
-`SHA256SUMS` in each release lists the checksums of every file.
+### Notes
+
+- If the shell cannot find `ostack9s`, add `export PATH="$HOME/.local/bin:$PATH"` to
+  `~/.zshrc` or `~/.bashrc`.
+- Linux binaries are built on Ubuntu 22.04 and run on distributions with glibc 2.35 or
+  newer. `SHA256SUMS` in each release lists the checksums of every file.
+- macOS binaries (`darwin-arm64`, `darwin-x86_64`) are built as well, but Linux is the
+  supported platform.
 
 ## Usage
 
@@ -316,8 +334,9 @@ git tag v0.2.0 && git push origin v0.2.0
 ```
 
 The `release` workflow checks that the tag matches the version, runs the checks, builds
-the binaries (x86_64 and aarch64), the `.deb` and `.rpm` packages and the wheel, and
-publishes them in a GitHub release with `SHA256SUMS`.
+the binaries (Linux x86_64 and aarch64, macOS arm64 and x86_64), the `.deb` and `.rpm`
+packages and the wheel, and publishes them in a GitHub release with `SHA256SUMS` and
+`install.sh`.
 
 ## About This Project
 

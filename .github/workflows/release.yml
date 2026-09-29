@@ -47,11 +47,21 @@ jobs:
         include:
           # Ubuntu 22.04 (glibc 2.35): binaries also run on newer distributions.
           - runner: ubuntu-22.04
+            os: linux
             arch: amd64
             target: x86_64
           - runner: ubuntu-22.04-arm
+            os: linux
             arch: arm64
             target: aarch64
+          - runner: macos-15
+            os: darwin
+            arch: arm64
+            target: arm64
+          - runner: macos-15-intel
+            os: darwin
+            arch: amd64
+            target: x86_64
     runs-on: ${{ matrix.runner }}
     env:
       VERSION: ${{ needs.version.outputs.version }}
@@ -70,21 +80,24 @@ jobs:
           dist/ostack9s import --help
       - name: Tarball
         run: |
-          name="ostack9s-${VERSION}-linux-${{ matrix.target }}"
+          name="ostack9s-${VERSION}-${{ matrix.os }}-${{ matrix.target }}"
           mkdir -p "out/$name"
           cp dist/ostack9s LICENSE README.md "out/$name/"
           tar -C out -czf "$name.tar.gz" "$name"
       - uses: actions/setup-go@v7
+        if: matrix.os == 'linux'
         with:
           go-version: stable
       - name: .deb and .rpm packages
+        if: matrix.os == 'linux'
         run: |
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.47.0
           "$(go env GOPATH)/bin/nfpm" package --config packaging/nfpm.yaml --packager deb --target .
           "$(go env GOPATH)/bin/nfpm" package --config packaging/nfpm.yaml --packager rpm --target .
       - uses: actions/upload-artifact@v7
         with:
-          name: binary-${{ matrix.target }}
+          name: binary-${{ matrix.os }}-${{ matrix.target }}
+          if-no-files-found: error
           path: |
             *.tar.gz
             *.deb
@@ -106,6 +119,10 @@ jobs:
     needs: [binary, wheel]
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: install.sh
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v8
         with:
           path: assets
@@ -114,5 +131,7 @@ jobs:
         run: cd assets && sha256sum -- * > SHA256SUMS
       - uses: softprops/action-gh-release@v3
         with:
-          files: assets/*
+          files: |
+            assets/*
+            install.sh
           generate_release_notes: true
