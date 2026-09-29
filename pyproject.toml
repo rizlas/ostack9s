@@ -1,6 +1,6 @@
 [project]
 name = "ostack9s"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast, k9s style terminal dashboard for OpenStack"
 readme = "README.md"
 license = "GPL-3.0-or-later"
