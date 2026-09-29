@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
@@ -146,7 +147,15 @@ def main(argv: list[str] | None = None) -> None:
         kind=args.view,
         refresh=args.refresh,
     )
-    app.run()
+    # A dedicated loop that is never closed: closing it would wait for the SDK
+    # calls still running in worker threads, up to the API timeout.
+    app.run(loop=asyncio.new_event_loop())
+    sys.stdout.flush()
+    sys.stderr.flush()
+    logging.shutdown()
+    # Same for the interpreter, which joins those threads at exit. Nothing is
+    # lost: the token cache is written atomically.
+    os._exit(app.return_code or 0)
 
 
 if __name__ == "__main__":
