@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from rich.syntax import Syntax
@@ -120,6 +121,24 @@ QUOTA_ROWS = [
 BAR_WIDTH = 10
 
 
+def quota_rows(keys: Iterable[str]) -> list[tuple[str, str, str, str]]:
+    """QUOTA_ROWS plus one row per limited volume type found in ``keys``.
+
+    Rows are (key, label, unit, volume type); volume type rows follow the
+    total they belong to, e.g. "gigabytes:Ceph-SSD" after "gigabytes".
+    """
+    typed: dict[str, list[str]] = {}
+    for key in keys:
+        metric, _, vtype = key.partition(":")
+        if vtype:
+            typed.setdefault(metric, []).append(vtype)
+    rows = []
+    for key, label, unit in QUOTA_ROWS:
+        rows.append((key, label, unit, ""))
+        rows.extend((f"{key}:{v}", label, unit, v) for v in sorted(typed.get(key, [])))
+    return rows
+
+
 def usage_style(usage: Usage) -> str:
     ratio = usage.ratio
     if ratio is None:
@@ -176,14 +195,15 @@ class QuotaPanel(Static):
         table.add_column(style="grey70", no_wrap=True)
         table.add_column(no_wrap=True)
         table.add_column(justify="right", no_wrap=True)
-        for key, label, unit in QUOTA_ROWS:
+        for key, label, unit, vtype in quota_rows(summary.usage if summary else ()):
+            name = f"  {vtype}" if vtype else t(label)
             usage = summary.usage.get(key) if summary else None
             if usage is None:
                 waiting = any(s in pending for s in ("compute", "volume", "network"))
                 value = Text("…" if waiting else "-", style="grey50")
-                table.add_row(t(label), Text(" " * BAR_WIDTH), value)
+                table.add_row(name, Text(" " * BAR_WIDTH), value)
                 continue
-            table.add_row(t(label), usage_bar(usage), usage_value(usage, unit))
+            table.add_row(name, usage_bar(usage), usage_value(usage, unit))
         body = Text()
         if summary and summary.gpus:
             body.append(f"\n{t('GPUs in use')}", style="grey70")

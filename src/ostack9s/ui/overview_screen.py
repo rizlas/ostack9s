@@ -17,7 +17,7 @@ from ..cloud import CloudManager, Context
 from ..i18n import t
 from ..overview import Summary, Usage, short_error, summarize
 from ..privacy import mask
-from .widgets import QUOTA_ROWS, status_counts, usage_value
+from .widgets import quota_rows, status_counts, usage_value
 
 # Default security group: every project uses at least one, so it does not count
 # as "activity" when deciding whether a region is empty.
@@ -146,8 +146,11 @@ class OverviewScreen(ModalScreen[Context | None]):
             cols.append(("cloud", t("Cloud"), ctx_attr("cloud")))
         cols.append(("region", t("Region"), ctx_attr("region")))
         cols.append(("gpus", t("GPUs in use"), total("gpus")))
-        for key, label, unit in QUOTA_ROWS:
-            title = f"{t(label)} ({unit})" if unit else t(label)
+        keys = {k for s in self.summaries.values() for k in s.usage}
+        for key, label, unit, vtype in quota_rows(keys):
+            title = f"{t(label)} {vtype}".rstrip()
+            if unit:
+                title += f" ({unit})"
             cols.append((key, title, metric(key)))
         cols.append(("servers", t("Servers"), total("servers")))
         cols.append(("note", t("Note"), lambda k: ""))

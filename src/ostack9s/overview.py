@@ -67,13 +67,27 @@ def _compute(conn: Connection, _ctx: Context) -> dict[str, Usage]:
     }
 
 
+# Cinder quotas per volume type are keyed "<metric>_<type>", e.g. "gigabytes_Ceph-SSD".
+VOLUME_TYPE_METRICS = ("volumes", "gigabytes")
+
+
 def _volume(conn: Connection, ctx: Context) -> dict[str, Usage]:
     q = conn.block_storage.get_quota_set(ctx.project_id, usage=True)
     usage = q.usage or {}
-    return {
+    out = {
         "volumes": Usage(usage.get("volumes", 0), q.volumes),
         "gigabytes": Usage(usage.get("gigabytes", 0), q.gigabytes),
     }
+    # Horizon shows only the totals. Per type limits are the ones that usually
+    # run out first; unlimited types are skipped to keep the panel short.
+    for key, used in usage.items():
+        metric, _, vtype = key.partition("_")
+        if metric not in VOLUME_TYPE_METRICS or not vtype:
+            continue
+        limit = getattr(q, key, None)
+        if isinstance(limit, int) and limit >= 0:
+            out[f"{metric}:{vtype}"] = Usage(used, limit)
+    return out
 
 
 def _network(conn: Connection, ctx: Context) -> dict[str, Usage]:

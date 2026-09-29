@@ -384,6 +384,45 @@ def test_summarize_reports_progress():
     assert summary.servers is not None and summary.servers["ACTIVE"] == 1
 
 
+def test_volume_type_quotas():
+    from ostack9s.overview import summarize
+    from ostack9s.ui.widgets import quota_rows
+
+    conn = fake_conn()
+    conn.block_storage.get_quota_set.return_value = SimpleNamespace(
+        usage={
+            "volumes": 3,
+            "gigabytes": 300,
+            "backup_gigabytes": 0,
+            "gigabytes_foo-ssd": 250,
+            "volumes_foo-ssd": 2,
+            "gigabytes_bar_hdd": 50,
+            "volumes___DEFAULT__": 1,
+        },
+        volumes=-1,
+        gigabytes=-1,
+        backup_gigabytes=1000,
+        **{
+            "gigabytes_foo-ssd": 1000,
+            "volumes_foo-ssd": 10,
+            "gigabytes_bar_hdd": 500,
+            "volumes___DEFAULT__": -1,
+        },
+    )
+    usage = summarize(conn, CTX, include_servers=False).usage
+    assert usage["gigabytes:foo-ssd"].text() == "250/1000"
+    assert usage["gigabytes:bar_hdd"].text() == "50/500"
+    assert usage["volumes:foo-ssd"].text() == "2/10"
+    # Unlimited types and other Cinder quotas are not listed.
+    assert "volumes:__DEFAULT__" not in usage
+    assert not any(k.startswith("backup") for k in usage)
+
+    keys = [row[0] for row in quota_rows(usage)]
+    assert keys[keys.index("volumes") + 1] == "volumes:foo-ssd"
+    at = keys.index("gigabytes")
+    assert keys[at + 1 : at + 3] == ["gigabytes:bar_hdd", "gigabytes:foo-ssd"]
+
+
 async def test_privacy_toggle_masks_table():
     from ostack9s import privacy
 
