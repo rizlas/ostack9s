@@ -121,7 +121,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: install.sh
+          sparse-checkout: |
+            install.sh
+            CHANGELOG.md
           sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v8
         with:
@@ -129,9 +131,22 @@ jobs:
           merge-multiple: true
       - name: Checksums
         run: cd assets && sha256sum -- * > SHA256SUMS
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::no section for $version in CHANGELOG.md"
+            exit 1
+          fi
       - uses: softprops/action-gh-release@v3
         with:
           files: |
             assets/*
             install.sh
+          body_path: notes.md
           generate_release_notes: true

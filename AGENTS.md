@@ -121,8 +121,9 @@ These already caused bugs here:
   fails with `No module named ...`, add the module there and rebuild; CI builds the
   binary on Linux and macOS to catch this.
 - Release: bump the version in `pyproject.toml` and `src/ostack9s/__init__.py`, run
-  `uv lock`, commit, then push a `vX.Y.Z` tag. The release workflow checks that tag
-  and versions match.
+  `uv lock`, add a `## [X.Y.Z] - date` section to `CHANGELOG.md`, commit, then push a
+  `vX.Y.Z` tag. The release workflow checks that tag and versions match, and uses the
+  changelog section as release notes (it fails when the section is missing).
 - Pin GitHub Actions to tags that exist: some actions (e.g. `astral-sh/setup-uv`) do not
   publish moving major tags. actionlint does not detect this.
 
