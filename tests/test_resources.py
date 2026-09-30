@@ -57,6 +57,15 @@ def test_column_callable():
     assert Column("x", lambda o: o * 2).value(3) == "6"
 
 
+def test_volume_name_falls_back_to_id():
+    from ostack9s.resources.storage import VOLUME
+
+    name = next(c for c in VOLUME.columns if c.title == "Name")
+    assert name.value(SimpleNamespace(name="vol-a", id="id-a")) == "vol-a"
+    # System/root volumes have no name: show the id so the row is still identifiable.
+    assert name.value(SimpleNamespace(name=None, id="id-a")) == "id-a"
+
+
 def test_server_helpers():
     server = SimpleNamespace(
         addresses={
