@@ -88,6 +88,19 @@ def test_list_containers_fills_details():
     assert container.info.policy == "gold"
 
 
+def test_account_usage_reads_sdk_metadata():
+    from openstack.object_store.v1.account import Account
+
+    account = Account()
+    resp = MagicMock(status_code=204)
+    resp.headers = {"X-Account-Bytes-Used": "77853", "X-Account-Meta-Quota-Bytes": str(2**31)}
+    account._translate_response(resp, has_body=False)
+    conn = MagicMock()
+    conn.object_store.get_account_metadata.return_value = account
+    used, limit = swift.account_usage(conn)
+    assert limit == 2.0 and used > 0
+
+
 def test_account_usage():
     conn = MagicMock()
     conn.object_store.get_account_metadata.return_value = SimpleNamespace(

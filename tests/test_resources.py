@@ -36,6 +36,16 @@ def test_attr_nested_and_dict():
     assert attr({"a": {"b": 1}}, "a.b") == 1
 
 
+def test_attr_on_sdk_resources():
+    from openstack.compute.v2.server_group import ServerGroup
+
+    group = ServerGroup(name="foo", policy="anti-affinity", member_ids=["a"])
+    group.placement = "VIOLATED"  # computed attribute, not a key of the resource dict
+    assert attr(group, "placement") == "VIOLATED"
+    assert attr(group, "policy") == "anti-affinity"
+    assert attr(group, "member_ids") == ["a"]
+
+
 def test_fmt():
     assert fmt(None) == ""
     assert fmt(True) == "yes"

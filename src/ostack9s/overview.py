@@ -35,6 +35,8 @@ class Usage:
 
 
 def _num(value: float) -> str:
+    if 0 < value < 0.05:
+        return "<0.1"  # e.g. a few KiB of objects: not "0"
     rounded = round(float(value), 1)
     return str(int(rounded)) if rounded.is_integer() else f"{rounded:.1f}"
 

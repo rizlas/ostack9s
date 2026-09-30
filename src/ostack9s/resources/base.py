@@ -27,7 +27,9 @@ def attr(obj: Any, path: str, default: Any = None) -> Any:
     for part in path.split("."):
         if cur is None:
             return default
-        if isinstance(cur, dict):
+        # SDK resources are dict subclasses too: only plain dicts are read by key,
+        # so attributes set on a resource (e.g. computed columns) are found.
+        if type(cur) is dict:
             cur = cur.get(part)
             continue
         val = getattr(cur, part, None)

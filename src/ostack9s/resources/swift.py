@@ -56,7 +56,7 @@ def account_usage(conn: Connection) -> tuple[float, float]:
     """(GiB used, GiB quota or -1) of the Swift account (Horizon shows neither)."""
     account = conn.object_store.get_account_metadata()
     used = (attr(account, "account_bytes_used") or 0) / 2**30
-    quota = (attr(account, "metadata") or {}).get("quota-bytes")
+    quota = (getattr(account, "metadata", None) or {}).get("quota-bytes")
     try:
         limit = int(quota) / 2**30 if quota not in (None, "") else -1
     except (TypeError, ValueError):
