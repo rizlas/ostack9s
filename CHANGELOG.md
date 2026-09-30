@@ -4,6 +4,18 @@ All notable changes to ostack9s are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-09-30
+
+### Fixed
+
+- Startup no longer crashes when no clouds.yaml is configured: the SDK implicit
+  defaults cloud is ignored (#1).
+- Swift quota and computed columns are read from the SDK resources.
+
+### New contributors
+
+- @zvfvrv made their first contribution in #1.
+
 ## [0.3.0] - 2026-09-30
 
 ### Added
