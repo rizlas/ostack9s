@@ -4,6 +4,12 @@ All notable changes to ostack9s are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-09-30
+
+### Fixed
+
+- Volumes without a name show their id instead of an empty name (#2).
+
 ## [0.3.1] - 2026-09-30
 
 ### Fixed
