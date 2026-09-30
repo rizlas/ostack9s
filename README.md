@@ -115,7 +115,8 @@ for the APIs, `--lang en|it` (or `OSTACK9S_LANG`), `--privacy`, `--no-token-cach
   suggestion). It moves between resources, regions, projects and clouds.
 - **Quota panel** (F3 hides it): usage and limits of the project in the current region,
   with units and coloured bars (yellow above 75%, red above 90%), the volume and
-  gigabyte quotas of each limited volume type, and the GPUs in use by model.
+  gigabyte quotas of each limited volume type, the Swift account usage, and the GPUs in
+  use by model.
 - **Table** titled `resource(scope)[rows]`, with the active filter.
 - **Describe pane** (`d`): YAML of the highlighted row next to the table; `Tab` moves
   the focus into it.
@@ -178,7 +179,7 @@ project has no resources, `Enter` switches to the selected context.
 | Image | list, edit name and visibility, delete |
 | Network | networks (with subnet), subnets, routers (gateway, interfaces), ports (port security, allowed address pairs, trunks, QoS), floating IPs (allocate, associate, release), security groups and rules (ports using them), RBAC sharing of networks, network topology |
 | Load balancer | load balancers, listeners, pools, members (navigation and delete) |
-| Object storage | containers (create, delete), objects (download, delete) |
+| Object storage | containers (create, upload, public/private, details, delete also when not empty), objects by folder (upload of files and directories, create folder, download, copy, metadata, expiry, temporary URL, details, delete also of folders) |
 | Key manager | secrets (list, delete) |
 | Identity | application credentials (create, delete, time left) |
 
@@ -222,6 +223,20 @@ Things a regular user cannot see in Horizon, or only one page at a time:
   application credentials expiring within 14 days, and a time left column in their
   view.
 - **Fault message** of servers in ERROR directly in the server table.
+- **Swift**: account usage against its quota (`X-Account-Meta-Quota-Bytes`) in the quota
+  panel; storage policy, public or private access, quotas and versioning of each
+  container; static large objects marked in the listing; expiry dates, large object
+  manifests and every header in the details (`i`); temporary URLs (`t`).
+
+### Object storage
+
+`Enter` on a container opens its objects one folder at a time (folders first, `Enter`
+opens a folder, `Esc` goes back up). `u` uploads a file or a whole directory into the
+current folder: files larger than the Swift limit are uploaded as static large objects.
+`N` creates a folder, `D` downloads, `c` copies to another name or container, `e` edits
+the metadata, `x` sets an expiry in days, `t` gives a temporary URL (it can create the
+account key when missing), `Ctrl+D` deletes an object or a folder with everything in it.
+On a container `p` switches between public and private.
 
 ## GPUs
 

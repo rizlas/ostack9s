@@ -193,9 +193,11 @@ class FormScreen(ModalScreen[dict[str, Any] | None]):
                 )
         notes = [t(f.help)] if f.help else []
         if f.name in self.load_errors:
-            notes.append(
-                t("options unavailable ({error}): enter the ID", error=self.load_errors[f.name])
-            )
+            error = self.load_errors[f.name]
+            if f.kind == "select":
+                notes.append(t("options unavailable ({error}): enter the ID", error=error))
+            else:
+                notes.append(t("current value unavailable ({error})", error=error))
         if notes:
             yield Static(escape(" · ".join(notes)), classes="field-help")
 

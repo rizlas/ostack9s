@@ -548,6 +548,64 @@ CATALOG: dict[str, str] = {
     "routers": "router",
     "security group": "security group",
     "security groups": "security group",
+    "Also delete every object in it": "Elimina anche tutti gli oggetti che contiene",
+    "Container {name} is private": "Il container {name} è privato",
+    "Container {name} is public: {url}": "Il container {name} è pubblico: {url}",
+    "Copied to {container}/{name}": "Copiato in {container}/{name}",
+    "Copy": "Copia",
+    "Create an account temp URL key if missing": "Crea una temp URL key dell'account se manca",
+    "Create folder": "Crea cartella",
+    "Delete after days (0 = never)": "Elimina dopo giorni (0 = mai)",
+    "Destination container": "Container di destinazione",
+    "Destination name": "Nome di destinazione",
+    "Details": "Dettagli",
+    "Edit metadata": "Modifica metadati",
+    "Empty = the file or directory name, inside the current folder": (
+        "Vuoto = nome del file o della directory, nella cartella corrente"
+    ),
+    "Expiry removed from {name}": "Scadenza rimossa da {name}",
+    "Folder name": "Nome della cartella",
+    "Folder {name} created": "Cartella {name} creata",
+    "Folder {name} deleted ({count} objects)": "Cartella {name} eliminata ({count} oggetti)",
+    "Local file or directory": "File o directory locale",
+    "Metadata": "Metadati",
+    "Metadata updated ({count} keys)": "Metadati aggiornati ({count} chiavi)",
+    "No temp URL key on the account or the container": (
+        "Nessuna temp URL key sull'account o sul container"
+    ),
+    "Object name": "Nome dell'oggetto",
+    "Object storage": "Object storage",
+    "One per line: key: value. Keys left out are removed": (
+        "Uno per riga: chiave: valore. Le chiavi omesse vengono rimosse"
+    ),
+    "Open folder": "Apri cartella",
+    "Quota": "Quota",
+    "Select an object, not a folder": "Seleziona un oggetto, non una cartella",
+    "Set access": "Imposta accesso",
+    "Set expiry": "Imposta scadenza",
+    "Temporary URL": "URL temporaneo",
+    "Upload": "Carica",
+    "Uploaded {count} files ({size} MiB) to {container}": (
+        "Caricati {count} file ({size} MiB) in {container}"
+    ),
+    "Valid for minutes": "Valido per minuti",
+    "Versioning": "Versioning",
+    "Writes X-Account-Meta-Temp-URL-Key on the account": (
+        "Scrive X-Account-Meta-Temp-URL-Key sull'account"
+    ),
+    "current value unavailable ({error})": "valore attuale non disponibile ({error})",
+    "deleted at: {date}": "eliminato il: {date}",
+    "dynamic large object: segments in {path}": "dynamic large object: segmenti in {path}",
+    "folder": "cartella",
+    "public = anyone can read and list the objects, without a token": (
+        "public = chiunque può leggere ed elencare gli oggetti, senza token"
+    ),
+    "static large object (segments deleted with it)": (
+        "static large object (i segmenti vengono eliminati con lui)"
+    ),
+    "{count} objects": "{count} oggetti",
+    "{name} will be deleted in {days} days": "{name} sarà eliminato tra {days} giorni",
+    "{path} does not exist": "{path} non esiste",
 }
 
 

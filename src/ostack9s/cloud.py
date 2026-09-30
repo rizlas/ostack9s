@@ -16,12 +16,20 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from keystoneauth1 import exceptions as ks_exceptions
+from openstack import exceptions as sdk_exceptions
 from openstack.config import OpenStackConfig, cloud_region
 from openstack.connection import Connection
 
 from .tokens import TokenCache, cache_key
 
 DEFAULT_TIMEOUT = 30
+# Service not deployed in this cloud or region: not an error worth showing.
+MISSING_SERVICE = (
+    sdk_exceptions.EndpointNotFound,
+    sdk_exceptions.ServiceDisabledException,
+    ks_exceptions.EndpointNotFound,
+)
 REGION_SERVICES = {"compute", "network", "volumev3", "block-storage", "image"}
 
 

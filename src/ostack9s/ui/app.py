@@ -824,11 +824,15 @@ class OstdApp(App[None]):
         item = self.selected_item()
         if child is None or item is None:
             return
+        query = child.query(item)
+        if query is None:
+            self.action_describe()
+            return
         kind = resources.get(child.kind)
         label = self.view.kind.item_label(item)
         view = View(
             kind,
-            query=child.query(item),
+            query=query,
             parent=item,
             path=[*self.view.path, kind.title],
             scope=label,
@@ -862,6 +866,8 @@ class OstdApp(App[None]):
             self._set_status(t("preparing form…"))
             options, errors = await asyncio.to_thread(_load_options, action.fields, conn, item)
             defaults = _defaults(action.fields, item)
+            loaded = await asyncio.to_thread(_load_defaults, action.fields, conn, item, errors)
+            defaults.update(loaded)
             self._set_status()
             form = FormScreen(title, action.fields, defaults, options, errors)
             result = await self.push_screen_wait(form)
@@ -1095,6 +1101,21 @@ def _defaults(fields: list[Field], item: Any) -> dict[str, Any]:
             except Exception:  # noqa: BLE001 - default not computable (e.g. no item)
                 default = None
         out[f.name] = default
+    return out
+
+
+def _load_defaults(
+    fields: list[Field], conn: Connection, item: Any, errors: dict[str, str]
+) -> dict[str, Any]:
+    """Initial values read from the cloud (e.g. the current metadata of an object)."""
+    out: dict[str, Any] = {}
+    for f in fields:
+        if f.load is None:
+            continue
+        try:
+            out[f.name] = f.load(conn, item)
+        except Exception as exc:  # noqa: BLE001 - the form still opens, empty
+            errors[f.name] = short_error(exc)
     return out
 
 

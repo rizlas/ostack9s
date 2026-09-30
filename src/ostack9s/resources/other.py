@@ -1,8 +1,7 @@
-"""Load balancers (Octavia), object storage (Swift), secrets (Barbican), identity."""
+"""Load balancers (Octavia), secrets (Barbican), identity."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from openstack.connection import Connection
@@ -25,42 +24,9 @@ def delete_member(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
     return t("Member {name} is being deleted", name=item.name or item.address)
 
 
-def create_container(conn: Connection, _item: Any, v: dict[str, Any]) -> str:
-    conn.object_store.create_container(name=v["name"])
-    return t("Container {name} created", name=v["name"])
-
-
-def delete_container(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
-    conn.object_store.delete_container(item)
-    return t("Container {name} deleted", name=item.name)
-
-
-def download_object(conn: Connection, item: Any, v: dict[str, Any]) -> str:
-    target = Path(v["path"]).expanduser()
-    if target.is_dir():
-        target = target / Path(item.name).name
-    if target.exists():
-        raise FileExistsError(t("{path} already exists", path=target))
-    data = conn.object_store.download_object(item, container=item.container)
-    target.write_bytes(data)
-    return t("Saved to {path} ({size} bytes)", path=target, size=len(data))
-
-
-def delete_object(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
-    conn.object_store.delete_object(item, container=item.container)
-    return t("Object {name} deleted", name=item.name)
-
-
 def delete_secret(conn: Connection, item: Any, _v: dict[str, Any]) -> str:
     conn.key_manager.delete_secret(item)
     return t("Secret {name} deleted", name=item.name or item.id)
-
-
-def list_objects(conn: Connection, q: dict[str, Any]) -> Any:
-    for obj in conn.object_store.objects(q["container"]):
-        # Object resources do not always carry their container: actions need it.
-        obj.container = q["container"]
-        yield obj
 
 
 def _identity(conn: Connection) -> Any:
@@ -202,64 +168,6 @@ MEMBER = ResourceKind(
     actions=[Action("ctrl+d", "Delete", delete_member, confirm=True, destructive=True)],
 )
 
-CONTAINER = ResourceKind(
-    key="object_store.container",
-    title="Containers",
-    service="object-store",
-    aliases=("containers", "swift", "buckets"),
-    status=None,
-    id_attr="name",
-    enter="o",
-    list=lambda conn, q: conn.object_store.containers(**q),
-    columns=[
-        Column("Name", "name"),
-        Column("Objects", "count"),
-        Column("Size MiB", lambda c: round((attr(c, "bytes") or 0) / 2**20, 1)),
-    ],
-    children=[Child("o", "Objects", "object_store.object", lambda c: {"container": c.name})],
-    actions=[
-        Action(
-            "N",
-            "Create container",
-            create_container,
-            needs_item=False,
-            fields=[Field("name", "Name", required=True)],
-        ),
-        Action(
-            "ctrl+d",
-            "Delete (must be empty)",
-            delete_container,
-            confirm=True,
-            destructive=True,
-        ),
-    ],
-)
-
-OBJECT = ResourceKind(
-    key="object_store.object",
-    title="Objects",
-    service="object-store",
-    requires_parent=True,
-    status=None,
-    id_attr="name",
-    list=list_objects,
-    columns=[
-        Column("Name", "name"),
-        Column("Size KiB", lambda o: round((attr(o, "content_length") or 0) / 1024, 1)),
-        Column("Type", "content_type"),
-        Column("Modified", "last_modified_at"),
-    ],
-    actions=[
-        Action(
-            "D",
-            "Download",
-            download_object,
-            fields=[Field("path", "Destination (file or directory)", required=True, default=".")],
-        ),
-        Action("ctrl+d", "Delete", delete_object, confirm=True, destructive=True),
-    ],
-)
-
 SECRET = ResourceKind(
     key="key_manager.secret",
     title="Secrets",
@@ -311,4 +219,4 @@ APP_CREDENTIAL = ResourceKind(
     ],
 )
 
-KINDS = [LOADBALANCER, LISTENER, POOL, MEMBER, CONTAINER, OBJECT, SECRET, APP_CREDENTIAL]
+KINDS = [LOADBALANCER, LISTENER, POOL, MEMBER, SECRET, APP_CREDENTIAL]

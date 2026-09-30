@@ -117,8 +117,11 @@ QUOTA_ROWS = [
     ("floating_ips", "Floating IPs", ""),
     ("networks", "Networks", ""),
     ("security_groups", "Sec. groups", ""),
+    ("object_gigabytes", "Object storage", "GiB"),
 ]
 BAR_WIDTH = 10
+# Rows hidden when the service does not answer (not deployed, or no role for it).
+OPTIONAL_ROWS = {"object_gigabytes"}
 
 
 def quota_rows(keys: Iterable[str]) -> list[tuple[str, str, str, str]]:
@@ -190,7 +193,9 @@ class QuotaPanel(Static):
             self.update("")
             return
         self.border_title = t("quota · {region}", region=ctx.region)
-        pending = summary.pending if summary else {"compute", "volume", "network", "servers"}
+        pending = (
+            summary.pending if summary else {"compute", "volume", "network", "object", "servers"}
+        )
         table = Table.grid(padding=(0, 1))
         table.add_column(style="grey70", no_wrap=True)
         table.add_column(no_wrap=True)
@@ -198,8 +203,10 @@ class QuotaPanel(Static):
         for key, label, unit, vtype in quota_rows(summary.usage if summary else ()):
             name = f"  {vtype}" if vtype else t(label)
             usage = summary.usage.get(key) if summary else None
+            if usage is None and key in OPTIONAL_ROWS and "object" not in pending:
+                continue  # service not available in this cloud or region
             if usage is None:
-                waiting = any(s in pending for s in ("compute", "volume", "network"))
+                waiting = any(s in pending for s in ("compute", "volume", "network", "object"))
                 value = Text("…" if waiting else "-", style="grey50")
                 table.add_row(name, Text(" " * BAR_WIDTH), value)
                 continue

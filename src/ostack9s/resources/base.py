@@ -86,6 +86,8 @@ class Field:
     help: str = ""
     # Option loader for ``select`` fields: (conn, item) -> [(label, value)]
     options: Callable[[Connection, Any], Options] | None = None
+    # Initial value read from the cloud: (conn, item) -> value (overrides ``default``).
+    load: Callable[[Connection, Any], Any] | None = None
 
 
 @dataclass
@@ -113,12 +115,14 @@ class Child:
     """Navigation to a dependent resource (e.g. network -> subnets).
 
     ``query`` builds, from the parent resource, the filters passed to the child list.
+    It returns None when the child does not apply to that row (Enter then shows
+    the YAML details).
     """
 
     key: str
     label: str
     kind: str
-    query: Callable[[Any], dict[str, Any]]
+    query: Callable[[Any], dict[str, Any] | None]
 
 
 # (connection, filters) -> resources. Filters are empty for top level views.

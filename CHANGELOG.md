@@ -4,6 +4,21 @@ All notable changes to ostack9s are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Swift objects browsed by folder: upload of files and directories (large files as
+  static large objects), create folder, copy, edit metadata, expiry, temporary URLs,
+  details with every header, delete of whole folders.
+- Swift containers: storage policy, public or private access (`p` switches it), quotas
+  and versioning as columns, details, delete of non empty containers.
+- Swift account usage and quota in the quota panel and in the overview.
+
+### Fixed
+
+- Quitting no longer waits for API calls still running in the background.
+
 ## [0.2.0] - 2026-09-29
 
 Views for what Horizon does not show to a regular user.
@@ -49,6 +64,7 @@ First release: k9s style terminal dashboard for OpenStack with resource views an
 actions, quota panel, global overview, network topology, privacy mode and Italian
 translation.
 
+[Unreleased]: https://github.com/rizlas/ostack9s/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/rizlas/ostack9s/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/rizlas/ostack9s/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rizlas/ostack9s/releases/tag/v0.1.0

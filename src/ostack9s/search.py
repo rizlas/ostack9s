@@ -12,20 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
-from keystoneauth1 import exceptions as ks_exceptions
-from openstack import exceptions as sdk_exceptions
 from openstack.connection import Connection
 
-from .cloud import Context
+from .cloud import MISSING_SERVICE, Context
 from .resources.base import attr
 
 MIN_QUERY = 3
-# Service not deployed in this cloud or region: not worth reporting.
-MISSING_SERVICE = (
-    sdk_exceptions.EndpointNotFound,
-    sdk_exceptions.ServiceDisabledException,
-    ks_exceptions.EndpointNotFound,
-)
 
 
 def _ips(values: Iterable[dict[str, Any]] | None, key: str = "ip_address") -> list[str]:

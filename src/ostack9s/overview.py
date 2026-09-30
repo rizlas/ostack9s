@@ -12,7 +12,7 @@ from typing import Any
 
 from openstack.connection import Connection
 
-from .cloud import Context
+from .cloud import MISSING_SERVICE, Context
 from .gpu import count_gpus
 
 
@@ -100,6 +100,22 @@ def _network(conn: Connection, ctx: Context) -> dict[str, Usage]:
     return {n: u(n) for n in ("floating_ips", "networks", "security_groups")}
 
 
+def _object(conn: Connection, _ctx: Context) -> dict[str, Usage]:
+    """Swift account usage against its quota (``X-Account-Meta-Quota-Bytes``)."""
+    from .resources.swift import account_usage  # late import: resources import this module
+
+    try:
+        used, limit = account_usage(conn)
+    except MISSING_SERVICE:
+        return {}  # no object storage in this cloud or region
+    except Exception as exc:
+        # Swift often needs a role (e.g. swiftoperator): no access, no row.
+        if getattr(exc, "status_code", None) in (401, 403):
+            return {}
+        raise
+    return {"object_gigabytes": Usage(used, limit)}
+
+
 def server_counts(servers: Any) -> Counter[str]:
     return Counter(s.status for s in servers)
 
@@ -113,6 +129,7 @@ QUOTA_JOBS: dict[str, Callable[[Connection, Context], dict[str, Usage]]] = {
     "compute": _compute,
     "volume": _volume,
     "network": _network,
+    "object": _object,
 }
 
 

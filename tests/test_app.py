@@ -49,6 +49,9 @@ def fake_conn() -> MagicMock:
     conn.network.get_quota.return_value = SimpleNamespace(
         floating_ips=quota, networks=quota, security_groups=quota
     )
+    conn.object_store.get_account_metadata.return_value = SimpleNamespace(
+        account_bytes_used=2 * 2**30, metadata={"quota-bytes": str(10 * 2**30)}
+    )
     return conn
 
 
@@ -379,7 +382,8 @@ def test_summarize_reports_progress():
     conn = fake_conn()
     updates = []
     summary = summarize(conn, CTX, updates.append)
-    assert len(updates) == 4
+    assert len(updates) == 5
+    assert summary.usage["object_gigabytes"].text() == "2/10"
     assert not updates[-1].pending
     assert summary.servers is not None and summary.servers["ACTIVE"] == 1
 
@@ -473,6 +477,9 @@ async def test_overview_sort_and_hide_empty():
         networks={"used": 0, "limit": 0},
         security_groups={"used": 1, "limit": 10},
     )
+    idle.object_store.get_account_metadata.return_value = SimpleNamespace(
+        account_bytes_used=0, metadata={}
+    )
     manager.connection = lambda ctx: idle if ctx.region == "r2" else busy
     app = make_app(manager)
     async with app.run_test(size=(200, 40)) as pilot:
@@ -555,3 +562,41 @@ async def test_checks_views_open_from_command_bar():
         await pilot.pause(0.3)
         assert app.view.kind.key == "checks.security"
         assert app.view.error is None
+
+
+async def test_swift_folders_navigation():
+    from test_swift import Resp
+
+    listings = {
+        "": [{"subdir": "docs/"}, {"name": "top.txt", "bytes": 1}],
+        "docs/": [{"name": "docs/a.txt", "bytes": 2}],
+    }
+
+    def request(path, method, **kwargs):
+        if method == "HEAD":
+            return Resp(headers={"X-Storage-Policy": "gold"})
+        params = kwargs["params"]
+        return Resp(body=[] if params["marker"] else listings[params["prefix"]])
+
+    manager = FakeManager()
+    manager.conn.object_store.containers.return_value = [
+        SimpleNamespace(name="foo", count=2, bytes=3)
+    ]
+    manager.conn.object_store.request.side_effect = request
+    app = make_app(manager)
+    async with app.run_test(size=(200, 40)) as pilot:
+        await wait_rows(pilot, app, 2)
+        app.run_command("containers")
+        table = await wait_rows(pilot, app, 1)
+        assert "gold" in [str(c) for c in table.get_row_at(0)]
+        await pilot.press("enter")
+        table = await wait_rows(pilot, app, 2)
+        assert [str(table.get_row_at(i)[0]) for i in range(2)] == ["docs/", "top.txt"]
+        await pilot.press("enter")  # the folder comes first
+        table = await wait_rows(pilot, app, 1)
+        assert app.view.query == {"container": "foo", "prefix": "docs/"}
+        assert str(table.get_row_at(0)[0]) == "a.txt"
+        await pilot.press("enter")  # a file: YAML details, no new view
+        await pilot.pause(0.1)
+        assert isinstance(app.screen, TextScreen)
+        assert app.view.query["prefix"] == "docs/"
