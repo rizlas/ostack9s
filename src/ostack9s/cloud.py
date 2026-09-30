@@ -282,7 +282,9 @@ class CloudManager:
         with self._lock:
             key = (cloud, project_id)
             if key not in self._scoped:
-                conn = base.connect_as_project(project_id)
+                # connect_as_project would treat a bare string as a project *name*;
+                # scope by id explicitly so the new connection really targets it.
+                conn = base.connect_as(project_id=project_id)
                 self._authorize(conn, self._token_key(cloud, project_id))
                 self._scoped[key] = conn
             return self._scoped[key]
