@@ -115,7 +115,20 @@ class CloudManager:
     # --- clouds -----------------------------------------------------------
 
     def cloud_names(self) -> list[str]:
-        return sorted(self._config.get_cloud_names())
+        """Clouds with usable credentials.
+
+        Without a ``clouds.yaml`` the SDK exposes an implicit ``defaults`` cloud
+        that has no auth at all: it cannot connect, so it is left out. An empty
+        result lets the UI say "no cloud found" instead of crashing on it.
+        """
+        return [name for name in sorted(self._config.get_cloud_names()) if self._has_auth(name)]
+
+    def _has_auth(self, cloud: str) -> bool:
+        try:
+            raw = self._config.get_one(cloud=cloud, validate=False)
+        except Exception:  # noqa: BLE001 - unresolvable entry: not selectable
+            return False
+        return bool(raw.auth.get("auth_url"))
 
     def _raw(self, cloud: str) -> Any:
         """Cloud configuration without authenticating (cached)."""
