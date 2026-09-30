@@ -159,7 +159,7 @@ VOLUME = ResourceKind(
     aliases=("volumes", "vol", "disks"),
     list=lambda conn, q: conn.block_storage.volumes(**q),
     columns=[
-        Column("Name", "name"),
+        Column("Name", lambda i: attr(i, "name") or attr(i, "id")),
         Column("Status", "status"),
         Column("Size GiB", "size"),
         Column("Type", "volume_type"),
