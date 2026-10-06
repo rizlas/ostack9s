@@ -162,12 +162,16 @@ async def test_stop_requires_confirmation():
         assert manager.conn.compute.stop_server.call_args.args[0].name == "alpha"
 
 
-async def test_start_without_confirmation():
+async def test_start_requires_confirmation():
     manager = FakeManager()
     app = make_app(manager)
     async with app.run_test(size=(160, 40)) as pilot:
         await wait_rows(pilot, app, 2)
         await pilot.press("down", "s")
+        await pilot.pause(0.2)
+        assert isinstance(app.screen, ConfirmScreen)
+        manager.conn.compute.start_server.assert_not_called()
+        await pilot.press("y")
         await pilot.pause(0.3)
         manager.conn.compute.start_server.assert_called_once()
         assert manager.conn.compute.start_server.call_args.args[0].name == "beta"
@@ -194,6 +198,8 @@ async def test_action_error_is_notified():
     async with app.run_test(size=(160, 40)) as pilot:
         await wait_rows(pilot, app, 2)
         await pilot.press("s")
+        await pilot.pause(0.2)
+        await pilot.press("y")
         await pilot.pause(0.3)
         assert any("boom" in str(n.message) for n in app._notifications)
 
