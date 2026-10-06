@@ -4,6 +4,15 @@ All notable changes to ostack9s are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.3] - 2026-10-06
+
+### Fixed
+
+- Switching project scopes the connection by project id, so the views show the
+  resources of the selected project instead of the previous one (#3).
+- All one-shot server actions (start, pause, resume, unshelve, lock, confirm or
+  revert resize, ...) ask for confirmation before running (#4).
+
 ## [0.3.2] - 2026-09-30
 
 ### Fixed
