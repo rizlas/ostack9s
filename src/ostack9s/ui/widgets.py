@@ -18,12 +18,15 @@ from ..i18n import t
 from ..overview import Summary, Usage
 from ..privacy import mask
 
-LOGO = r"""
-        _           _    ___
- ___ __| |_ __ _ __| |__/ _ \___
-/ _ (_-<  _/ _` / _| / /\_, (_-<
-\___/__/\__\__,_\__|_\_\ /_//__/
-"""
+LOGO_LINES = r"""
+           _             _     ___
+  ___  ___| |_ __ _  ___| | __/ _ \ ___
+ / _ \/ __| __/ _` |/ __| |/ / (_) / __|
+| (_) \__ \ || (_| | (__|   < \__, \__ \
+ \___/|___/\__\__,_|\___|_|\_\  /_/|___/
+""".strip("\n").splitlines()
+LOGO_WIDTH = max(len(line) for line in LOGO_LINES)
+LOGO = "\n".join(LOGO_LINES)
 
 HINT_ROWS = 6
 HINT_COL_WIDTH = 26
@@ -71,7 +74,7 @@ class HeaderBar(Static):
         grid.add_column(no_wrap=True)
 
         width = self.size.width or 160
-        free = max(0, width - 34 - 34)
+        free = max(0, width - 34 - LOGO_WIDTH - 2)
         ncols = max(1, free // HINT_COL_WIDTH)
         capacity = ncols * HINT_ROWS
         shown = hints
@@ -83,10 +86,11 @@ class HeaderBar(Static):
         for col in columns:
             grid.add_column(no_wrap=True, width=HINT_COL_WIDTH)
             cells.append(Text("\n").join(hint_text(h) for h in col))
-        grid.add_column(no_wrap=True, justify="right")
-        logo = Text(LOGO.strip("\n"), style="bold orange1")
+        # Left aligned: right alignment would shift the lines of the logo independently.
+        grid.add_column(no_wrap=True, justify="left")
+        logo = Text(LOGO, style="bold orange1")
         if private:
-            logo.append("\n" + t("PRIVACY MODE").center(19), style="bold white on red")
+            logo.append("\n" + t("PRIVACY MODE").center(LOGO_WIDTH), style="bold white on red")
         cells.append(logo)
         grid.add_row(*cells)
         self.update(grid)
