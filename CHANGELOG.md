@@ -4,6 +4,18 @@ All notable changes to ostack9s are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.4] - 2026-10-10
+
+### Fixed
+
+- The ASCII logo in the header is aligned and uses a more readable font; the
+  privacy mode badge spans the logo width.
+
+### Documentation
+
+- README shows a demo GIF and screenshots, generated from fake data in privacy
+  mode by `docs/screenshots.py`.
+
 ## [0.3.3] - 2026-10-06
 
 ### Fixed
